@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+
+members = [
+  "gravity-restaking",
+  "gravity-restaking/meta"
+]
