@@ -51,7 +51,7 @@ pub trait TokenWhitelistModule {
         let staked_egld_one_token = self.staked_egld_for_one_token(token_id).get();
         let decimals = self.get_token_decimals(token_id);
 
-        staked_egld_one_token * amount / BigUint::from(decimals)
+        staked_egld_one_token * amount / BigUint::from(10u32).pow(decimals as u32)
     }
 
     fn get_token_decimals(&self, token_id: &TokenIdentifier) -> usize {
