@@ -1,5 +1,6 @@
 multiversx_sc::imports!();
 
+pub const BASE_FOR_DECIMALS: u32 = 10;
 pub const DEFAULT_TOKEN_DECIMALS: usize = 18;
 
 #[multiversx_sc::module]
@@ -51,7 +52,7 @@ pub trait TokenWhitelistModule {
         let staked_egld_one_token = self.staked_egld_for_one_token(token_id).get();
         let decimals = self.get_token_decimals(token_id);
 
-        staked_egld_one_token * amount / BigUint::from(10u32).pow(decimals as u32)
+        staked_egld_one_token * amount / BigUint::from(BASE_FOR_DECIMALS).pow(decimals as u32)
     }
 
     fn get_token_decimals(&self, token_id: &TokenIdentifier) -> usize {
