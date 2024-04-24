@@ -48,13 +48,7 @@ pub trait TokenWhitelistModule {
             .set(staked_egld_for_one_token);
     }
 
-    fn get_total_staked_egld(&self, token_id: &TokenIdentifier, amount: &BigUint) -> BigUint {
-        let staked_egld_one_token = self.staked_egld_for_one_token(token_id).get();
-        let decimals = self.get_token_decimals(token_id);
-
-        staked_egld_one_token * amount / BigUint::from(BASE_FOR_DECIMALS).pow(decimals as u32)
-    }
-
+    #[view(getTokenDecimals)]
     fn get_token_decimals(&self, token_id: &TokenIdentifier) -> usize {
         let decimals_mapper = self.custom_token_decimals(token_id);
         if decimals_mapper.is_empty() {
@@ -62,6 +56,13 @@ pub trait TokenWhitelistModule {
         }
 
         decimals_mapper.get()
+    }
+
+    fn get_total_staked_egld(&self, token_id: &TokenIdentifier, amount: &BigUint) -> BigUint {
+        let staked_egld_one_token = self.staked_egld_for_one_token(token_id).get();
+        let decimals = self.get_token_decimals(token_id);
+
+        staked_egld_one_token * amount / BigUint::from(BASE_FOR_DECIMALS).pow(decimals as u32)
     }
 
     fn require_token_in_whitelist(&self, token_id: &TokenIdentifier) {

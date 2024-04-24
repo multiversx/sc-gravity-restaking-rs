@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           21
+// Endpoints:                           22
 // Async Callback:                       1
-// Total number of exported functions:  23
+// Total number of exported functions:  24
 
 #![no_std]
 #![allow(internal_features)]
@@ -25,6 +25,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         addTokenToWhitelist => add_token_to_whitelist
         removeTokenFromWhitelist => remove_token_from_whitelist
         setStakedEgldAmount => set_staked_egld_amount
+        getTokenDecimals => get_token_decimals
         getTokenWhitelist => token_whitelist
         getStakedEgldForOneToken => staked_egld_for_one_token
         deposit => deposit
