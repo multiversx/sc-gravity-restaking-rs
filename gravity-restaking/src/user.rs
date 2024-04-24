@@ -26,12 +26,8 @@ pub trait UserModule:
             self.user_tokens(caller_id).get()
         };
 
-        let whitelist_mapper = self.token_whitelist();
         for payment in &payments {
-            require!(
-                whitelist_mapper.contains(&payment.token_identifier),
-                "Invalid token"
-            );
+            self.require_token_in_whitelist(&payment.token_identifier);
 
             user_tokens.add_payment(payment);
         }
@@ -104,35 +100,12 @@ pub trait UserModule:
                 let deduct_result = user_tokens.deduct_payment(&payment);
                 require!(deduct_result.is_ok(), "Trying to delegate too many tokens");
 
-                total += &payment.amount;
+                total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
                 output_payments.push(payment);
             }
         });
 
-        self.total_delegated_amount(validator_id)
-            .update(|total_del| {
-                *total_del += &total;
-
-                let config = self.validator_config(validator_id).get();
-                if let Some(max_amt) = config.opt_max_delegation {
-                    require!(*total_del <= max_amt, "Max delegated amount exceeded");
-                }
-            });
-        self.total_by_user(caller_id, validator_id)
-            .update(|total_user| *total_user += total);
-
-        let _ = self.all_delegators(validator_id).insert(caller_id);
-
-        let delegated_by_mapper = self.delegated_by(caller_id, validator_id);
-        let mut tokens_delegated_by_user = if !delegated_by_mapper.is_empty() {
-            delegated_by_mapper.get()
-        } else {
-            UniquePayments::new()
-        };
-        for payment in &output_payments {
-            tokens_delegated_by_user.add_payment(payment);
-        }
-        delegated_by_mapper.set(tokens_delegated_by_user);
+        self.add_delegation(caller_id, validator_id, &output_payments, &total);
     }
 
     #[endpoint(revokeDelegationFromValidator)]
@@ -164,7 +137,7 @@ pub trait UserModule:
                 let deduct_result = delegated_tokens.deduct_payment(&payment);
                 require!(deduct_result.is_ok(), "Trying to revoke too many tokens");
 
-                total += &payment.amount;
+                total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
                 output_payments.push(payment);
             }
         });
@@ -187,6 +160,57 @@ pub trait UserModule:
                 user_tokens.add_payment(payment);
             }
         });
+    }
+
+    #[payable("*")]
+    #[endpoint(addOwnDelegation)]
+    fn add_own_delegation(&self) {
+        let validator = self.blockchain().get_caller();
+        let validator_id = self.validator_id().get_id_non_zero(&validator);
+        let user_id_of_validator = self.user_ids().get_id_or_insert(&validator);
+
+        let payments = self.get_non_empty_payments();
+        let mut total = BigUint::zero();
+        for payment in &payments {
+            self.require_token_in_whitelist(&payment.token_identifier);
+
+            total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+        }
+
+        self.add_delegation(user_id_of_validator, validator_id, &payments, &total);
+    }
+
+    fn add_delegation(
+        &self,
+        caller_id: AddressId,
+        validator_id: AddressId,
+        payments: &PaymentsVec<Self::Api>,
+        total: &BigUint,
+    ) {
+        self.total_delegated_amount(validator_id)
+            .update(|total_del| {
+                *total_del += total;
+
+                let config = self.validator_config(validator_id).get();
+                if let Some(max_amt) = config.opt_max_delegation {
+                    require!(*total_del <= max_amt, "Max delegated amount exceeded");
+                }
+            });
+        self.total_by_user(caller_id, validator_id)
+            .update(|total_user| *total_user += total);
+
+        let _ = self.all_delegators(validator_id).insert(caller_id);
+
+        let delegated_by_mapper = self.delegated_by(caller_id, validator_id);
+        let mut tokens_delegated_by_user = if !delegated_by_mapper.is_empty() {
+            delegated_by_mapper.get()
+        } else {
+            UniquePayments::new()
+        };
+        for payment in payments {
+            tokens_delegated_by_user.add_payment(payment);
+        }
+        delegated_by_mapper.set(tokens_delegated_by_user);
     }
 
     fn require_non_empty_args(&self, args: &PaymentsMultiValue<Self::Api>) {

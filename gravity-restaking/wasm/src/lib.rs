@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           19
+// Endpoints:                           21
 // Async Callback:                       1
-// Total number of exported functions:  21
+// Total number of exported functions:  23
 
 #![no_std]
 #![allow(internal_features)]
@@ -24,6 +24,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         moveStakeToReStaking => move_stake_to_re_staking
         addTokenToWhitelist => add_token_to_whitelist
         removeTokenFromWhitelist => remove_token_from_whitelist
+        setStakedEgldAmount => set_staked_egld_amount
         getTokenWhitelist => token_whitelist
         getStakedEgldForOneToken => staked_egld_for_one_token
         deposit => deposit
@@ -31,6 +32,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         withdrawAll => withdraw_all
         delegateToValidator => delegate_to_validator
         revokeDelegationFromValidator => revoke_delegation_from_validator
+        addOwnDelegation => add_own_delegation
         getUserTokens => user_tokens
         register => register
         addKeys => add_keys

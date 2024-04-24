@@ -143,8 +143,6 @@ pub trait ValidatorModule: utils::UtilsModule {
         self.total_delegated_amount(validator_id).get()
     }
 
-    // TODO: addOwnDelegation - multiTransfer of stakedEGLD assets - register these to the validator.
-
     #[storage_mapper("validatorId")]
     fn validator_id(&self) -> AddressToIdMapper<Self::Api>;
 
