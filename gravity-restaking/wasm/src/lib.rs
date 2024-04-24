@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           16
+// Endpoints:                           19
 // Async Callback:                       1
-// Total number of exported functions:  18
+// Total number of exported functions:  21
 
 #![no_std]
 #![allow(internal_features)]
@@ -29,6 +29,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         deposit => deposit
         withdraw => withdraw
         withdrawAll => withdraw_all
+        delegateToValidator => delegate_to_validator
+        revokeDelegationFromValidator => revoke_delegation_from_validator
         getUserTokens => user_tokens
         register => register
         addKeys => add_keys
@@ -36,6 +38,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         setUpFee => set_up_fee
         setMaxDelegation => set_max_delegation
         getValidatorConfig => get_validator_config
+        getTotalDelegatedAmount => get_total_delegated_amount
     )
 }
 

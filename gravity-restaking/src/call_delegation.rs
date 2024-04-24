@@ -39,7 +39,7 @@ pub trait CallDelegationModule {
     }
 
     #[callback]
-    fn move_stake_callback(&self, #[call_result] call_result: ManagedAsyncCallResult<()>) {
+    fn move_stake_callback(&self, #[call_result] _call_result: ManagedAsyncCallResult<()>) {
         // TODO
     }
 
