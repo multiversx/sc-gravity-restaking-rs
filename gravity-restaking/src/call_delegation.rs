@@ -17,6 +17,7 @@ const MAX_SHARD_ID: u32 = i32::MAX as u32;
 
 #[multiversx_sc::module]
 pub trait CallDelegationModule {
+    // TODO: Integrate EGLD
     #[endpoint(moveStakeToReStaking)]
     fn move_stake_to_re_staking(&self, delegation: ManagedAddress, value: BigUint) {
         let caller = self.blockchain().get_caller();

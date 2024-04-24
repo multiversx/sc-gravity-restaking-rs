@@ -1,3 +1,5 @@
+use crate::unique_payments::UniquePayments;
+
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
@@ -114,8 +116,15 @@ pub trait ValidatorModule: utils::UtilsModule {
     fn set_max_delegation(&self, max_delegation: BigUint) {
         let caller = self.blockchain().get_caller();
         let caller_id = self.validator_id().get_id_non_zero(&caller);
-        self.validator_config(caller_id)
-            .update(|config| config.opt_max_delegation = Some(max_delegation));
+        self.validator_config(caller_id).update(|config| {
+            let current_total = self.total_delegated_amount(caller_id).get();
+            require!(
+                max_delegation >= current_total,
+                "Cannot set max below the current delegated amount"
+            );
+
+            config.opt_max_delegation = Some(max_delegation);
+        });
 
         // TODO: event
     }
@@ -125,6 +134,13 @@ pub trait ValidatorModule: utils::UtilsModule {
         let validator_id = self.validator_id().get_id_non_zero(&address);
 
         self.validator_config(validator_id).get()
+    }
+
+    #[view(getTotalDelegatedAmount)]
+    fn get_total_delegated_amount(&self, address: ManagedAddress) -> BigUint {
+        let validator_id = self.validator_id().get_id_non_zero(&address);
+
+        self.total_delegated_amount(validator_id).get()
     }
 
     // TODO: addOwnDelegation - multiTransfer of stakedEGLD assets - register these to the validator.
@@ -140,4 +156,24 @@ pub trait ValidatorModule: utils::UtilsModule {
 
     #[storage_mapper("idForName")]
     fn id_for_name(&self, name: &ManagedBuffer) -> SingleValueMapper<AddressId>;
+
+    #[storage_mapper("allDelegators")]
+    fn all_delegators(&self, validator_id: AddressId) -> UnorderedSetMapper<AddressId>;
+
+    #[storage_mapper("delegatedBy")]
+    fn delegated_by(
+        &self,
+        user_id: AddressId,
+        validator_id: AddressId,
+    ) -> SingleValueMapper<UniquePayments<Self::Api>>;
+
+    #[storage_mapper("totalDelegatedAmount")]
+    fn total_delegated_amount(&self, validator_id: AddressId) -> SingleValueMapper<BigUint>;
+
+    #[storage_mapper("totalByUser")]
+    fn total_by_user(
+        &self,
+        user_id: AddressId,
+        validator_id: AddressId,
+    ) -> SingleValueMapper<BigUint>;
 }
