@@ -77,6 +77,6 @@ pub trait TokenWhitelistModule {
     #[storage_mapper("stkEgldTok")]
     fn staked_egld_for_one_token(&self, token_id: &TokenIdentifier) -> SingleValueMapper<BigUint>;
 
-    #[storage_mapper("customTokenDecimals")]
+    #[storage_mapper("custTokDec")]
     fn custom_token_decimals(&self, token_id: &TokenIdentifier) -> SingleValueMapper<usize>;
 }
