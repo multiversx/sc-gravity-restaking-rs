@@ -11,6 +11,14 @@ path = "src/lib.rs"
 [dependencies.multiversx-sc]
 version = "=0.48.0"
 
+[dependencies.mergeable]
+git = "https://github.com/multiversx/mx-exchange-sc"
+rev = "27085fb"
+
+[dependencies.utils]
+git = "https://github.com/multiversx/mx-exchange-sc"
+rev = "27085fb"
+
 [dev-dependencies]
 num-bigint = "0.4"
 

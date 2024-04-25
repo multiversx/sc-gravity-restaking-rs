@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                            1
-// Async Callback (empty):               1
-// Total number of exported functions:   3
+// Endpoints:                           22
+// Async Callback:                       1
+// Total number of exported functions:  24
 
 #![no_std]
 #![allow(internal_features)]
@@ -21,7 +21,28 @@ multiversx_sc_wasm_adapter::endpoints! {
     (
         init => init
         upgrade => upgrade
+        moveStakeToReStaking => move_stake_to_re_staking
+        addTokenToWhitelist => add_token_to_whitelist
+        removeTokenFromWhitelist => remove_token_from_whitelist
+        setStakedEgldAmount => set_staked_egld_amount
+        getTokenDecimals => get_token_decimals
+        getTokenWhitelist => token_whitelist
+        getStakedEgldForOneToken => staked_egld_for_one_token
+        deposit => deposit
+        withdraw => withdraw
+        withdrawAll => withdraw_all
+        delegateToValidator => delegate_to_validator
+        revokeDelegationFromValidator => revoke_delegation_from_validator
+        addOwnDelegation => add_own_delegation
+        getUserTokens => user_tokens
+        register => register
+        addKeys => add_keys
+        removeKeys => remove_keys
+        setUpFee => set_up_fee
+        setMaxDelegation => set_max_delegation
+        getValidatorConfig => get_validator_config
+        getTotalDelegatedAmount => get_total_delegated_amount
     )
 }
 
-multiversx_sc_wasm_adapter::async_callback_empty! {}
+multiversx_sc_wasm_adapter::async_callback! { gravity_restaking }
