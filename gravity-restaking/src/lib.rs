@@ -3,6 +3,7 @@
 multiversx_sc::imports!();
 
 pub mod call_delegation;
+pub mod sovereign;
 pub mod token_whitelist;
 pub mod unique_payments;
 pub mod user;
@@ -14,6 +15,7 @@ pub trait GravityRestaking:
     + token_whitelist::TokenWhitelistModule
     + user::UserModule
     + validator::ValidatorModule
+    + sovereign::SovereignModule
     + utils::UtilsModule
 {
     #[init]

@@ -1,4 +1,7 @@
-use crate::unique_payments::{PaymentsVec, UniquePayments};
+use crate::{
+    call_delegation::EGLD_TOKEN_ID,
+    unique_payments::{PaymentsVec, UniquePayments},
+};
 
 multiversx_sc::imports!();
 
@@ -43,7 +46,9 @@ pub trait UserModule:
         let caller = self.blockchain().get_caller();
         let caller_id = self.user_ids().get_id_non_zero(&caller);
 
+        let egld_token_id = TokenIdentifier::from_esdt_bytes(EGLD_TOKEN_ID);
         let mut output_payments = PaymentsVec::new();
+        let mut total_egld = BigUint::zero();
         self.user_tokens(caller_id).update(|user_tokens| {
             for token_tuple in tokens {
                 let (token_id, nonce, amount) = token_tuple.into_tuple();
@@ -53,11 +58,19 @@ pub trait UserModule:
                 let deduct_result = user_tokens.deduct_payment(&payment);
                 require!(deduct_result.is_ok(), "Trying to withdraw too many tokens");
 
-                output_payments.push(payment);
+                if payment.token_identifier != egld_token_id {
+                    output_payments.push(payment);
+                } else {
+                    total_egld += payment.amount;
+                }
             }
         });
 
-        self.send().direct_multi(&caller, &output_payments);
+        self.send().direct_non_zero_egld(&caller, &total_egld);
+
+        if !output_payments.is_empty() {
+            self.send().direct_multi(&caller, &output_payments);
+        }
     }
 
     #[endpoint(withdrawAll)]
@@ -71,10 +84,29 @@ pub trait UserModule:
             output
         });
 
-        let output_payments = user_tokens.into_payments();
+        let mut output_payments = user_tokens.into_payments();
         require!(!output_payments.is_empty(), "Nothing to withdraw");
 
-        self.send().direct_multi(&caller, &output_payments);
+        let egld_token_id = TokenIdentifier::from_esdt_bytes(EGLD_TOKEN_ID);
+        let mut opt_index_to_remove = None;
+        for (i, payment) in output_payments.iter().enumerate() {
+            if payment.token_identifier == egld_token_id {
+                opt_index_to_remove = Some(i);
+
+                break;
+            }
+        }
+
+        if let Some(index_to_remove) = opt_index_to_remove {
+            let egld_payment = output_payments.get(index_to_remove);
+            output_payments.remove(index_to_remove);
+
+            self.send().direct_egld(&caller, &egld_payment.amount);
+        }
+
+        if !output_payments.is_empty() {
+            self.send().direct_multi(&caller, &output_payments);
+        }
     }
 
     #[endpoint(delegateToValidator)]
