@@ -1,3 +1,5 @@
+use crate::unique_payments::UniquePayments;
+
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
@@ -35,7 +37,6 @@ pub trait SovereignModule: utils::UtilsModule {
         // TODO: event
     }
 
-    // setUpRewards - definition of rewards for delegators - start and end date, value, computation.
     #[endpoint(setUpRewards)]
     fn set_up_rewards(
         &self,
@@ -72,6 +73,10 @@ pub trait SovereignModule: utils::UtilsModule {
         self.sovereign_info(sov_id).get()
     }
 
+    fn require_valid_sov_id(&self, sov_id: AddressId) {
+        require!(sov_id != NULL_ID, "Invalid chain name");
+    }
+
     #[storage_mapper("sovId")]
     fn sovereign_id(&self) -> AddressToIdMapper<Self::Api>;
 
@@ -80,4 +85,24 @@ pub trait SovereignModule: utils::UtilsModule {
 
     #[storage_mapper("sovForName")]
     fn sov_chain_for_name(&self, name: &ManagedBuffer) -> SingleValueMapper<AddressId>;
+
+    #[storage_mapper("allSovDelegators")]
+    fn all_sov_delegators(&self, sov_id: AddressId) -> UnorderedSetMapper<AddressId>;
+
+    #[storage_mapper("delegatedSovBy")]
+    fn delegated_sov_by(
+        &self,
+        user_id: AddressId,
+        sov_id: AddressId,
+    ) -> SingleValueMapper<UniquePayments<Self::Api>>;
+
+    #[storage_mapper("totalDelegatedSovAmount")]
+    fn total_delegated_sov_amount(&self, sov_id: AddressId) -> SingleValueMapper<BigUint>;
+
+    #[storage_mapper("totalSovByUser")]
+    fn total_sov_by_user(
+        &self,
+        user_id: AddressId,
+        sov_id: AddressId,
+    ) -> SingleValueMapper<BigUint>;
 }

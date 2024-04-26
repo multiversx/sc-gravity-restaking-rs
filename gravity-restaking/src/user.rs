@@ -13,6 +13,7 @@ pub type PaymentsMultiValue<M> =
 pub trait UserModule:
     crate::token_whitelist::TokenWhitelistModule
     + crate::validator::ValidatorModule
+    + crate::sovereign::SovereignModule
     + crate::common_actions::CommonActionsModule
     + utils::UtilsModule
 {
@@ -122,25 +123,8 @@ pub trait UserModule:
         let caller = self.blockchain().get_caller();
         let caller_id = self.user_ids().get_id_non_zero(&caller);
         let validator_id = self.validator_id().get_id_non_zero(&validator);
-
-        let mut output_payments = PaymentsVec::new();
-        let mut total = BigUint::zero();
-        self.user_tokens(caller_id).update(|user_tokens| {
-            for token_tuple in tokens {
-                let (token_id, nonce, amount) = token_tuple.into_tuple();
-                require!(amount > 0, "Can't delegate 0");
-
-                // in case the token was removed from the whitelist in the meantime
-                self.require_token_in_whitelist(&token_id);
-
-                let payment = EsdtTokenPayment::new(token_id, nonce, amount);
-                let deduct_result = user_tokens.deduct_payment(&payment);
-                require!(deduct_result.is_ok(), "Trying to delegate too many tokens");
-
-                total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
-                output_payments.push(payment);
-            }
-        });
+        let (output_payments, total) =
+            self.before_add_delegation(self.user_tokens(caller_id), tokens);
 
         let args = AddDelegationArgs {
             total_delegated_mapper: self.total_delegated_amount(validator_id),
@@ -148,6 +132,35 @@ pub trait UserModule:
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
             opt_validator_config_mapper: Some(self.validator_config(validator_id)),
+            payments_to_add: output_payments,
+            total_amount: total,
+            caller_id,
+        };
+        self.add_delegation(args);
+    }
+
+    #[endpoint(delegateForSovereignChain)]
+    fn delegate_for_sovereign_chain(
+        &self,
+        sov_name: ManagedBuffer,
+        tokens: PaymentsMultiValue<Self::Api>,
+    ) {
+        self.require_non_empty_args(&tokens);
+
+        let caller = self.blockchain().get_caller();
+        let caller_id = self.user_ids().get_id_non_zero(&caller);
+        let sov_id = self.sov_chain_for_name(&sov_name).get();
+        self.require_valid_sov_id(sov_id);
+
+        let (output_payments, total) =
+            self.before_add_delegation(self.user_tokens(caller_id), tokens);
+
+        let args = AddDelegationArgs {
+            total_delegated_mapper: self.total_delegated_sov_amount(sov_id),
+            total_by_user_mapper: self.total_sov_by_user(caller_id, sov_id),
+            all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
+            delegated_by_mapper: self.delegated_sov_by(caller_id, sov_id),
+            opt_validator_config_mapper: None,
             payments_to_add: output_payments,
             total_amount: total,
             caller_id,
@@ -172,6 +185,31 @@ pub trait UserModule:
             total_by_user_mapper: self.total_by_user(caller_id, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
+            user_tokens_mapper: self.user_tokens(caller_id),
+            tokens,
+            caller_id,
+        };
+        self.remove_delegation(args);
+    }
+
+    #[endpoint(revokeDelegationFromSovereignChain)]
+    fn revoke_delegation_from_sovereign_chain(
+        &self,
+        sov_name: ManagedBuffer,
+        tokens: PaymentsMultiValue<Self::Api>,
+    ) {
+        self.require_non_empty_args(&tokens);
+
+        let caller = self.blockchain().get_caller();
+        let caller_id = self.user_ids().get_id_non_zero(&caller);
+        let sov_id = self.sov_chain_for_name(&sov_name).get();
+        self.require_valid_sov_id(sov_id);
+
+        let args = RemoveDelegationArgs {
+            total_delegated_mapper: self.total_delegated_sov_amount(sov_id),
+            total_by_user_mapper: self.total_sov_by_user(caller_id, sov_id),
+            all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
+            delegated_by_mapper: self.delegated_sov_by(caller_id, sov_id),
             user_tokens_mapper: self.user_tokens(caller_id),
             tokens,
             caller_id,

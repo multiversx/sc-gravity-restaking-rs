@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           26
+// Endpoints:                           28
 // Async Callback:                       1
-// Total number of exported functions:  28
+// Total number of exported functions:  30
 
 #![no_std]
 #![allow(internal_features)]
@@ -31,7 +31,9 @@ multiversx_sc_wasm_adapter::endpoints! {
         withdraw => withdraw
         withdrawAll => withdraw_all
         delegateToValidator => delegate_to_validator
+        delegateForSovereignChain => delegate_for_sovereign_chain
         revokeDelegationFromValidator => revoke_delegation_from_validator
+        revokeDelegationFromSovereignChain => revoke_delegation_from_sovereign_chain
         addOwnDelegation => add_own_delegation
         getUserTokens => user_tokens
         register => register

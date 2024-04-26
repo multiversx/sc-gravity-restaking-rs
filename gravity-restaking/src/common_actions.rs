@@ -31,6 +31,33 @@ pub struct RemoveDelegationArgs<'a, S: StorageMapperApi> {
 
 #[multiversx_sc::module]
 pub trait CommonActionsModule: crate::token_whitelist::TokenWhitelistModule {
+    fn before_add_delegation(
+        &self,
+        user_tokens_mapper: SingleValueMapper<UniquePayments<Self::Api>>,
+        tokens: PaymentsMultiValue<Self::Api>,
+    ) -> (PaymentsVec<Self::Api>, BigUint<Self::Api>) {
+        let mut output_payments = PaymentsVec::new();
+        let mut total = BigUint::zero();
+        user_tokens_mapper.update(|user_tokens| {
+            for token_tuple in tokens {
+                let (token_id, nonce, amount) = token_tuple.into_tuple();
+                require!(amount > 0, "Can't delegate 0");
+
+                // in case the token was removed from the whitelist in the meantime
+                self.require_token_in_whitelist(&token_id);
+
+                let payment = EsdtTokenPayment::new(token_id, nonce, amount);
+                let deduct_result = user_tokens.deduct_payment(&payment);
+                require!(deduct_result.is_ok(), "Trying to delegate too many tokens");
+
+                total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+                output_payments.push(payment);
+            }
+        });
+
+        (output_payments, total)
+    }
+
     fn add_delegation(&self, args: AddDelegationArgs<Self::Api>) {
         args.total_delegated_mapper.update(|total_del| {
             *total_del += &args.total_amount;
