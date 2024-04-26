@@ -246,6 +246,35 @@ pub trait UserModule:
         self.add_delegation(args);
     }
 
+    /// Used by sovereign chains
+    #[payable("*")]
+    #[endpoint(addOwnSecurityFunds)]
+    fn add_own_security_funds(&self) {
+        let sov_chain = self.blockchain().get_caller();
+        let sov_id = self.sovereign_id().get_id_non_zero(&sov_chain);
+        let user_id_of_sov_chain = self.user_ids().get_id_or_insert(&sov_chain);
+
+        let payments = self.get_non_empty_payments();
+        let mut total = BigUint::zero();
+        for payment in &payments {
+            self.require_token_in_whitelist(&payment.token_identifier);
+
+            total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+        }
+
+        let args = AddDelegationArgs {
+            total_delegated_mapper: self.total_delegated_sov_amount(sov_id),
+            total_by_user_mapper: self.total_sov_by_user(user_id_of_sov_chain, sov_id),
+            all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
+            delegated_by_mapper: self.delegated_sov_by(user_id_of_sov_chain, sov_id),
+            opt_validator_config_mapper: None,
+            payments_to_add: payments,
+            total_amount: total,
+            caller_id: user_id_of_sov_chain,
+        };
+        self.add_delegation(args);
+    }
+
     fn require_non_empty_args(&self, args: &PaymentsMultiValue<Self::Api>) {
         require!(!args.is_empty(), "No arguments");
     }
