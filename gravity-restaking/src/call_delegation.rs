@@ -24,6 +24,7 @@ pub trait CallDelegationModule:
     crate::user::UserModule
     + crate::token_whitelist::TokenWhitelistModule
     + crate::validator::ValidatorModule
+    + crate::common_actions::CommonActionsModule
     + utils::UtilsModule
 {
     #[endpoint(moveStakeToReStaking)]
