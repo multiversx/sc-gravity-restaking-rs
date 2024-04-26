@@ -137,6 +137,8 @@ pub trait UserModule:
             caller_id,
         };
         self.add_delegation(args);
+
+        // TODO: event
     }
 
     #[endpoint(delegateForSovereignChain)]
@@ -166,6 +168,8 @@ pub trait UserModule:
             caller_id,
         };
         self.add_delegation(args);
+
+        // TODO: event
     }
 
     #[endpoint(revokeDelegationFromValidator)]
@@ -190,6 +194,8 @@ pub trait UserModule:
             caller_id,
         };
         self.remove_delegation(args);
+
+        // TODO: event
     }
 
     #[endpoint(revokeDelegationFromSovereignChain)]
@@ -215,6 +221,8 @@ pub trait UserModule:
             caller_id,
         };
         self.remove_delegation(args);
+
+        // TODO: event
     }
 
     /// Used by validators
@@ -244,6 +252,8 @@ pub trait UserModule:
             caller_id: user_id_of_validator,
         };
         self.add_delegation(args);
+
+        // TODO: event
     }
 
     /// Used by sovereign chains
@@ -273,6 +283,8 @@ pub trait UserModule:
             caller_id: user_id_of_sov_chain,
         };
         self.add_delegation(args);
+
+        // TODO: event
     }
 
     fn require_non_empty_args(&self, args: &PaymentsMultiValue<Self::Api>) {
