@@ -27,6 +27,7 @@ pub trait TokenWhitelistModule {
         require!(is_new, "Token already whitelisted");
     }
 
+    /// Note: Don't remove and add to set the staked_egld_for_one_token parameter, you'll ruin the internal consistency
     #[only_owner]
     #[endpoint(removeTokenFromWhitelist)]
     fn remove_token_from_whitelist(&self, token_id: TokenIdentifier) {

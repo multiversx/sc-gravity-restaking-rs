@@ -1,6 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
+pub type Epoch = u64;
+
 #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
 pub struct SovereignInfo<M: ManagedTypeApi> {
     pub name: ManagedBuffer<M>,
@@ -31,6 +33,36 @@ pub trait SovereignModule: utils::UtilsModule {
         id_for_name_mapper.set(caller_id);
 
         // TODO: event
+    }
+
+    // setUpRewards - definition of rewards for delegators - start and end date, value, computation.
+    #[endpoint(setUpRewards)]
+    fn set_up_rewards(
+        &self,
+        _start_epoch: Epoch,
+        _end_epoch: Epoch,
+        _total_value: BigUint,
+        /* _computation: ???, */
+    ) {
+        let caller = self.blockchain().get_caller();
+        let _caller_id = self.sovereign_id().get_id_non_zero(&caller);
+        // TODO: Unsure what to do with all this info yet
+    }
+
+    #[endpoint(unRegister)]
+    fn unregister(&self) {
+        let caller = self.blockchain().get_caller();
+        let caller_id = self.sovereign_id().remove_by_address(&caller);
+        require!(caller_id != NULL_ID, "Unknown sovereign chain");
+
+        let sov_info = self.sovereign_info(caller_id).take();
+        self.sov_chain_for_name(&sov_info.name).clear();
+    }
+
+    #[payable("*")]
+    #[endpoint(addRewards)]
+    fn add_rewards(&self) {
+        // TODO
     }
 
     #[view(getSovInfo)]

@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           23
+// Endpoints:                           26
 // Async Callback:                       1
-// Total number of exported functions:  25
+// Total number of exported functions:  28
 
 #![no_std]
 #![allow(internal_features)]
@@ -42,6 +42,9 @@ multiversx_sc_wasm_adapter::endpoints! {
         getValidatorConfig => get_validator_config
         getTotalDelegatedAmount => get_total_delegated_amount
         registerSov => register_sov
+        setUpRewards => set_up_rewards
+        unRegister => unregister
+        addRewards => add_rewards
         getSovInfo => get_sov_info
     )
 }
