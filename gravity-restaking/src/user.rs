@@ -1,6 +1,6 @@
 use crate::{
     call_delegation::EGLD_TOKEN_ID,
-    common_actions::AddDelegationArgs,
+    common_actions::{AddDelegationArgs, RemoveDelegationArgs},
     unique_payments::{PaymentsVec, UniquePayments},
 };
 
@@ -143,7 +143,7 @@ pub trait UserModule:
         });
 
         let args = AddDelegationArgs {
-            total_amount_mapper: self.total_delegated_amount(validator_id),
+            total_delegated_mapper: self.total_delegated_amount(validator_id),
             total_by_user_mapper: self.total_by_user(caller_id, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
@@ -167,46 +167,16 @@ pub trait UserModule:
         let caller_id = self.user_ids().get_id_non_zero(&caller);
         let validator_id = self.validator_id().get_id_non_zero(&validator);
 
-        let delegated_by_mapper = self.delegated_by(caller_id, validator_id);
-        require!(
-            !delegated_by_mapper.is_empty(),
-            "Nothing delegated to this validator"
-        );
-
-        let mut output_payments = PaymentsVec::new();
-        let mut total = BigUint::zero();
-        delegated_by_mapper.update(|delegated_tokens| {
-            for token_tuple in tokens {
-                let (token_id, nonce, amount) = token_tuple.into_tuple();
-                require!(amount > 0, "Can't revoke 0");
-
-                let payment = EsdtTokenPayment::new(token_id, nonce, amount);
-                let deduct_result = delegated_tokens.deduct_payment(&payment);
-                require!(deduct_result.is_ok(), "Trying to revoke too many tokens");
-
-                total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
-                output_payments.push(payment);
-            }
-        });
-
-        self.total_delegated_amount(validator_id)
-            .update(|total_del| {
-                *total_del -= &total;
-            });
-        self.total_by_user(caller_id, validator_id)
-            .update(|total_user| {
-                *total_user -= total;
-
-                if *total_user == 0 {
-                    let _ = self.all_delegators(validator_id).swap_remove(&caller_id);
-                }
-            });
-
-        self.user_tokens(caller_id).update(|user_tokens| {
-            for payment in &output_payments {
-                user_tokens.add_payment(payment);
-            }
-        });
+        let args = RemoveDelegationArgs {
+            total_delegated_mapper: self.total_delegated_amount(validator_id),
+            total_by_user_mapper: self.total_by_user(caller_id, validator_id),
+            all_delegators_mapper: &mut self.all_delegators(validator_id),
+            delegated_by_mapper: self.delegated_by(caller_id, validator_id),
+            user_tokens_mapper: self.user_tokens(caller_id),
+            tokens,
+            caller_id,
+        };
+        self.remove_delegation(args);
     }
 
     /// Used by validators
@@ -226,7 +196,7 @@ pub trait UserModule:
         }
 
         let args = AddDelegationArgs {
-            total_amount_mapper: self.total_delegated_amount(validator_id),
+            total_delegated_mapper: self.total_delegated_amount(validator_id),
             total_by_user_mapper: self.total_by_user(user_id_of_validator, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(user_id_of_validator, validator_id),
