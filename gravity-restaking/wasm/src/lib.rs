@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           32
+// Endpoints:                           33
 // Async Callback:                       1
-// Total number of exported functions:  34
+// Total number of exported functions:  35
 
 #![no_std]
 #![allow(internal_features)]
@@ -52,6 +52,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         getSovInfo => get_sov_info
         getUserTokens => user_tokens
         setUnbondEpochs => set_unbond_epochs
+        getUserUnbondInfo => get_user_unbond_info
     )
 }
 

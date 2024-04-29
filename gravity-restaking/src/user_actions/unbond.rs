@@ -36,11 +36,18 @@ impl<M: ManagedTypeApi> Mergeable<M> for UnbondInfo<M> {
 }
 
 #[multiversx_sc::module]
-pub trait UnbondModule {
+pub trait UnbondModule: super::common_storage::CommonStorageModule {
     #[only_owner]
     #[endpoint(setUnbondEpochs)]
     fn set_unbond_epochs(&self, unbond_epochs: Epoch) {
         self.unbond_epochs().set(unbond_epochs);
+    }
+
+    #[view(getUserUnbondInfo)]
+    fn get_user_unbond_info(&self, user: ManagedAddress) -> ManagedVec<UnbondInfo<Self::Api>> {
+        let user_id = self.user_ids().get_id_non_zero(&user);
+
+        self.unbond_info(user_id).get()
     }
 
     fn add_unbond_tokens(&self, user_id: AddressId, tokens: UniquePayments<Self::Api>) {
