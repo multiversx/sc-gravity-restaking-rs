@@ -80,7 +80,7 @@ pub trait UnbondModule {
         self.unbond_info(user_id).update(|user_unbond_info| {
             let mut i = 0;
             let mut vec_len = user_unbond_info.len();
-            while !user_unbond_info.is_empty() && i < vec_len {
+            while vec_len > 0 && i < vec_len {
                 let current_unbond_info = user_unbond_info.get(i);
                 if current_unbond_info.unbond_epoch > current_epoch {
                     i += 1;
