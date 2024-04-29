@@ -9,6 +9,8 @@ const BLS_KEY_LEN: usize = 96;
 const BLS_SIG_LEN: usize = 48;
 const MAX_PERCENT: Percent = 10_000;
 
+pub static INVALID_MAX_AMOUNT_ERR_MSG: &[u8] = b"Cannot set max below the current delegated amount";
+
 pub type BlsKey<M> = ManagedByteArray<M, BLS_KEY_LEN>;
 pub type BlsSignature<M> = ManagedByteArray<M, BLS_SIG_LEN>;
 pub type Percent = u32;
@@ -125,10 +127,7 @@ pub trait ValidatorModule:
         let caller_id = self.validator_id().get_id_non_zero(&caller);
         self.validator_config(caller_id).update(|config| {
             let current_total = self.total_delegated_amount(caller_id).get();
-            require!(
-                max_delegation >= current_total,
-                "Cannot set max below the current delegated amount"
-            );
+            require!(max_delegation >= current_total, INVALID_MAX_AMOUNT_ERR_MSG);
 
             config.opt_max_delegation = Some(max_delegation);
         });
@@ -142,6 +141,7 @@ pub trait ValidatorModule:
         let validator = self.blockchain().get_caller();
         let validator_id = self.validator_id().get_id_non_zero(&validator);
         let user_id_of_validator = self.user_ids().get_id_or_insert(&validator);
+        let validator_config = self.validator_config(validator_id).get();
 
         let payments = self.get_non_empty_payments();
         let mut total = BigUint::zero();
@@ -156,7 +156,7 @@ pub trait ValidatorModule:
             total_by_user_mapper: self.total_by_user(user_id_of_validator, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(user_id_of_validator, validator_id),
-            opt_validator_config_mapper: Some(self.validator_config(validator_id)),
+            opt_max_delegation: validator_config.opt_max_delegation,
             payments_to_add: payments,
             total_amount: total,
             caller_id: user_id_of_validator,
