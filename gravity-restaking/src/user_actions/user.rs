@@ -1,7 +1,8 @@
-use crate::{
+use crate::unique_payments::{PaymentsVec, UniquePayments};
+
+use super::{
     call_delegation::EGLD_TOKEN_ID,
     common_actions::{AddDelegationArgs, RemoveDelegationArgs},
-    unique_payments::{PaymentsVec, UniquePayments},
 };
 
 multiversx_sc::imports!();
@@ -12,9 +13,9 @@ pub type PaymentsMultiValue<M> =
 #[multiversx_sc::module]
 pub trait UserModule:
     crate::token_whitelist::TokenWhitelistModule
-    + crate::validator::ValidatorModule
-    + crate::sovereign::SovereignModule
-    + crate::common_actions::CommonActionsModule
+    + super::validator::ValidatorModule
+    + super::sovereign::SovereignModule
+    + super::common_actions::CommonActionsModule
     + utils::UtilsModule
 {
     #[payable("*")]

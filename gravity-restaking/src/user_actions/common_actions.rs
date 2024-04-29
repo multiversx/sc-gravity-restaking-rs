@@ -1,10 +1,8 @@
 use multiversx_sc::api::StorageMapperApi;
 
-use crate::{
-    unique_payments::{PaymentsVec, UniquePayments},
-    user::PaymentsMultiValue,
-    validator::ValidatorConfig,
-};
+use crate::unique_payments::{PaymentsVec, UniquePayments};
+
+use super::{user::PaymentsMultiValue, validator::ValidatorConfig};
 
 multiversx_sc::imports!();
 
