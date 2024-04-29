@@ -1,4 +1,4 @@
-use crate::call_delegation::EGLD_TOKEN_ID;
+use crate::user_actions::call_delegation::EGLD_TOKEN_ID;
 
 multiversx_sc::imports!();
 

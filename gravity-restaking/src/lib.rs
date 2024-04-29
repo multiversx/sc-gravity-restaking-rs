@@ -2,22 +2,18 @@
 
 multiversx_sc::imports!();
 
-pub mod call_delegation;
-pub mod common_actions;
-pub mod sovereign;
 pub mod token_whitelist;
 pub mod unique_payments;
-pub mod user;
-pub mod validator;
+pub mod user_actions;
 
 #[multiversx_sc::contract]
 pub trait GravityRestaking:
-    call_delegation::CallDelegationModule
+    user_actions::call_delegation::CallDelegationModule
     + token_whitelist::TokenWhitelistModule
-    + user::UserModule
-    + validator::ValidatorModule
-    + sovereign::SovereignModule
-    + common_actions::CommonActionsModule
+    + user_actions::user::UserModule
+    + user_actions::validator::ValidatorModule
+    + user_actions::sovereign::SovereignModule
+    + user_actions::common_actions::CommonActionsModule
     + utils::UtilsModule
 {
     #[init]

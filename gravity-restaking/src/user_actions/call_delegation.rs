@@ -21,11 +21,11 @@ pub static EGLD_TOKEN_ID: &[u8] = b"EGLD";
 
 #[multiversx_sc::module]
 pub trait CallDelegationModule:
-    crate::user::UserModule
+    super::user::UserModule
     + crate::token_whitelist::TokenWhitelistModule
-    + crate::validator::ValidatorModule
-    + crate::sovereign::SovereignModule
-    + crate::common_actions::CommonActionsModule
+    + super::validator::ValidatorModule
+    + super::sovereign::SovereignModule
+    + super::common_actions::CommonActionsModule
     + utils::UtilsModule
 {
     #[endpoint(moveStakeToReStaking)]
