@@ -39,6 +39,7 @@ pub trait ValidatorModule:
     crate::token_whitelist::TokenWhitelistModule
     + crate::user_actions::common_actions::CommonActionsModule
     + crate::user_actions::common_storage::CommonStorageModule
+    + crate::events::validator_events::ValidatorEventsModule
     + utils::UtilsModule
 {
     #[endpoint]
@@ -52,10 +53,10 @@ pub trait ValidatorModule:
         require!(id_for_name_mapper.is_empty(), "Name already taken");
 
         self.validator_config(caller_id)
-            .set(ValidatorConfig::new(name));
+            .set(ValidatorConfig::new(name.clone()));
         id_for_name_mapper.set(caller_id);
 
-        // TODO: event
+        self.emit_validator_register_event(caller, name);
     }
 
     /// pairs of bls_key and signed message of own address
@@ -80,11 +81,20 @@ pub trait ValidatorModule:
             new_bls_keys.push(bls_key);
         }
 
+        let keys_added = new_bls_keys.clone();
         self.validator_config(caller_id).update(|config| {
-            config.bls_keys.extend(&new_bls_keys);
+            while !new_bls_keys.is_empty() {
+                let current_key = new_bls_keys.get(0);
+                for existing_key in &config.bls_keys {
+                    require!(existing_key != *current_key, "Key already known");
+                }
+
+                config.bls_keys.push((*current_key).clone());
+                new_bls_keys.remove(0);
+            }
         });
 
-        // TODO: event
+        self.emit_validator_add_bls_keys_event(caller, keys_added);
     }
 
     #[endpoint(removeKeys)]
@@ -94,17 +104,19 @@ pub trait ValidatorModule:
 
         let mapper = self.validator_config(caller_id);
         let mut config = mapper.get();
+        let mut removed_keys = ManagedVec::new();
         for key in keys {
             let opt_index = config.bls_keys.find(&key);
             require!(opt_index.is_some(), "Key not found");
 
             let index = unsafe { opt_index.unwrap_unchecked() };
             config.bls_keys.remove(index);
+            removed_keys.push(key);
         }
 
         mapper.set(config);
 
-        // TODO: event
+        self.emit_validator_remove_bls_keys_event(caller, removed_keys);
     }
 
     // TODO: validateFor@projectID@LIST<BLSKEYS>@LISTOFStakeEGLDAssets
@@ -118,7 +130,7 @@ pub trait ValidatorModule:
         self.validator_config(caller_id)
             .update(|config| config.fee = fee);
 
-        // TODO: event
+        self.emit_validator_set_fee_event(caller, fee);
     }
 
     #[endpoint(setMaxDelegation)]
@@ -129,10 +141,10 @@ pub trait ValidatorModule:
             let current_total = self.total_delegated_amount(caller_id).get();
             require!(max_delegation >= current_total, INVALID_MAX_AMOUNT_ERR_MSG);
 
-            config.opt_max_delegation = Some(max_delegation);
+            config.opt_max_delegation = Some(max_delegation.clone());
         });
 
-        // TODO: event
+        self.emit_validator_set_max_delegation_event(caller, max_delegation);
     }
 
     #[payable("*")]
@@ -157,13 +169,13 @@ pub trait ValidatorModule:
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(user_id_of_validator, validator_id),
             opt_max_delegation: validator_config.opt_max_delegation,
-            payments_to_add: payments,
+            payments_to_add: payments.clone(),
             total_amount: total,
             caller_id: user_id_of_validator,
         };
         self.add_delegation(args);
 
-        // TODO: event
+        self.emit_validator_add_own_delegation_event(validator, payments);
     }
 
     #[view(getValidatorConfig)]

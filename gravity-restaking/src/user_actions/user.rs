@@ -18,6 +18,9 @@ pub trait UserModule:
     + super::unbond::UnbondModule
     + super::common_actions::CommonActionsModule
     + super::common_storage::CommonStorageModule
+    + crate::events::user_events::UserEventsModule
+    + crate::events::validator_events::ValidatorEventsModule
+    + crate::events::sov_events::SovEventsModule
     + utils::UtilsModule
 {
     #[payable("*")]
@@ -25,7 +28,9 @@ pub trait UserModule:
     fn deposit(&self) {
         let payments = self.get_non_empty_payments();
         let caller = self.blockchain().get_caller();
-        self.deposit_common(&caller, payments);
+        self.deposit_common(&caller, &payments);
+
+        self.emit_user_deposit_event(caller, payments);
     }
 
     /// Pairs of (token_id, nonce, amount)
@@ -120,13 +125,13 @@ pub trait UserModule:
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
             opt_max_delegation: validator_config.opt_max_delegation,
-            payments_to_add: output_payments,
+            payments_to_add: output_payments.clone(),
             total_amount: total,
             caller_id,
         };
         self.add_delegation(args);
 
-        // TODO: event
+        self.emit_delegate_validator_event(caller, validator, output_payments);
     }
 
     #[endpoint(delegateForSovereignChain)]
@@ -142,7 +147,7 @@ pub trait UserModule:
         let sov_id = self.sov_chain_for_name(&sov_name).get();
         self.require_valid_sov_id(sov_id);
 
-        let sov_info = self.sovereign_info(sov_id).get();
+        let sov_info = self.sov_info(sov_id).get();
         let (output_payments, total) =
             self.before_add_delegation(self.user_tokens(caller_id), tokens);
 
@@ -152,13 +157,14 @@ pub trait UserModule:
             all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
             delegated_by_mapper: self.delegated_sov_by(caller_id, sov_id),
             opt_max_delegation: sov_info.opt_max_restaking_cap,
-            payments_to_add: output_payments,
+            payments_to_add: output_payments.clone(),
             total_amount: total,
             caller_id,
         };
         self.add_delegation(args);
 
-        // TODO: event
+        let sov_address = unsafe { self.sov_id().get_address(sov_id).unwrap_unchecked() };
+        self.emit_delgate_sov_event(caller, sov_address, output_payments);
     }
 
     #[endpoint(revokeDelegationFromValidator)]
@@ -182,9 +188,9 @@ pub trait UserModule:
             caller_id,
         };
         let output_unique_payments = self.remove_delegation(args);
-        self.add_unbond_tokens(caller_id, output_unique_payments);
+        self.add_unbond_tokens(caller_id, output_unique_payments.clone());
 
-        // TODO: event
+        self.emit_revoke_validator_event(caller, validator, output_unique_payments);
     }
 
     #[endpoint(revokeDelegationFromSovereignChain)]
@@ -209,34 +215,42 @@ pub trait UserModule:
             caller_id,
         };
         let output_unique_payments = self.remove_delegation(args);
-        self.add_unbond_tokens(caller_id, output_unique_payments);
+        self.add_unbond_tokens(caller_id, output_unique_payments.clone());
 
-        // TODO: event
+        let sov_address = unsafe { self.sov_id().get_address(sov_id).unwrap_unchecked() };
+        self.emit_revoke_sov_event(caller, sov_address, output_unique_payments);
     }
 
     #[endpoint(unbondTokensCaller)]
     fn unbond_tokens_caller(&self) {
         let caller = self.blockchain().get_caller();
-        let caller_id = self.user_ids().get_id_non_zero(&caller);
-        let output_unique_payments = self.unbond_tokens_common(caller_id);
-        let output_payments = output_unique_payments.into_payments();
+        let output_payments = self.unbond_common(&caller);
         if !output_payments.is_empty() {
             self.send().direct_multi(&caller, &output_payments);
+
+            self.emit_unbond_tokens_caller_event(caller, output_payments);
         }
     }
 
     #[endpoint(unbondTokensGravityRestaking)]
     fn unbond_tokens_gravity_restaking(&self) {
         let caller = self.blockchain().get_caller();
-        let caller_id = self.user_ids().get_id_non_zero(&caller);
-        let output_unique_payments = self.unbond_tokens_common(caller_id);
-        let output_payments = output_unique_payments.into_payments();
+        let output_payments = self.unbond_common(&caller);
         if !output_payments.is_empty() {
-            self.deposit_common(&caller, output_payments);
+            self.deposit_common(&caller, &output_payments);
+
+            self.emit_unbond_tokens_gravity_restaking_event(caller, output_payments);
         }
     }
 
-    fn deposit_common(&self, caller: &ManagedAddress, payments: PaymentsVec<Self::Api>) {
+    fn unbond_common(&self, caller: &ManagedAddress) -> PaymentsVec<Self::Api> {
+        let caller_id = self.user_ids().get_id_non_zero(caller);
+        let output_unique_payments = self.unbond_tokens_common(caller_id);
+
+        output_unique_payments.into_payments()
+    }
+
+    fn deposit_common(&self, caller: &ManagedAddress, payments: &PaymentsVec<Self::Api>) {
         let ids_mapper = self.user_ids();
         let mut caller_id = ids_mapper.get_id(caller);
         let mut user_tokens = if caller_id == NULL_ID {
@@ -247,7 +261,7 @@ pub trait UserModule:
             self.user_tokens(caller_id).get()
         };
 
-        for payment in &payments {
+        for payment in payments {
             self.require_token_in_whitelist(&payment.token_identifier);
 
             user_tokens.add_payment(payment);

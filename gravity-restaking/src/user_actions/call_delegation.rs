@@ -28,6 +28,9 @@ pub trait CallDelegationModule:
     + super::unbond::UnbondModule
     + super::common_actions::CommonActionsModule
     + super::common_storage::CommonStorageModule
+    + crate::events::user_events::UserEventsModule
+    + crate::events::validator_events::ValidatorEventsModule
+    + crate::events::sov_events::SovEventsModule
     + utils::UtilsModule
 {
     #[endpoint(moveStakeToReStaking)]
@@ -59,26 +62,30 @@ pub trait CallDelegationModule:
         original_value: BigUint,
         #[call_result] call_result: ManagedAsyncCallResult<()>,
     ) {
-        if let ManagedAsyncCallResult::Ok(()) = call_result {
-            let ids_mapper = self.user_ids();
-            let mut caller_id = ids_mapper.get_id(&original_caller);
-            let mut user_tokens = if caller_id == NULL_ID {
-                caller_id = ids_mapper.insert_new(&original_caller);
-
-                UniquePayments::new()
-            } else {
-                self.user_tokens(caller_id).get()
-            };
-
-            let egld_payment = EsdtTokenPayment::new(
-                TokenIdentifier::from_esdt_bytes(EGLD_TOKEN_ID),
-                0,
-                original_value,
-            );
-            user_tokens.add_payment(egld_payment);
-
-            self.user_tokens(caller_id).set(user_tokens);
+        if call_result.is_err() {
+            return;
         }
+
+        let ids_mapper = self.user_ids();
+        let mut caller_id = ids_mapper.get_id(&original_caller);
+        let mut user_tokens = if caller_id == NULL_ID {
+            caller_id = ids_mapper.insert_new(&original_caller);
+
+            UniquePayments::new()
+        } else {
+            self.user_tokens(caller_id).get()
+        };
+
+        let egld_payment = EsdtTokenPayment::new(
+            TokenIdentifier::from_esdt_bytes(EGLD_TOKEN_ID),
+            0,
+            original_value.clone(),
+        );
+        user_tokens.add_payment(egld_payment);
+        self.user_tokens(caller_id).set(user_tokens);
+
+        let delegation = self.blockchain().get_caller();
+        self.emit_move_stake_event(original_caller, delegation, original_value);
     }
 
     #[proxy]
