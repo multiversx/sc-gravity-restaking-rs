@@ -1,5 +1,7 @@
 use crate::unique_payments::UniquePayments;
 
+use super::common_actions::AddDelegationArgs;
+
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
@@ -31,7 +33,12 @@ impl<M: ManagedTypeApi> ValidatorConfig<M> {
 }
 
 #[multiversx_sc::module]
-pub trait ValidatorModule: utils::UtilsModule {
+pub trait ValidatorModule:
+    crate::token_whitelist::TokenWhitelistModule
+    + crate::user_actions::common_actions::CommonActionsModule
+    + crate::user_actions::common_storage::CommonStorageModule
+    + utils::UtilsModule
+{
     #[endpoint]
     fn register(&self, name: ManagedBuffer) {
         self.require_not_empty_buffer(&name);
@@ -125,6 +132,36 @@ pub trait ValidatorModule: utils::UtilsModule {
 
             config.opt_max_delegation = Some(max_delegation);
         });
+
+        // TODO: event
+    }
+
+    #[payable("*")]
+    #[endpoint(addOwnDelegation)]
+    fn add_own_delegation(&self) {
+        let validator = self.blockchain().get_caller();
+        let validator_id = self.validator_id().get_id_non_zero(&validator);
+        let user_id_of_validator = self.user_ids().get_id_or_insert(&validator);
+
+        let payments = self.get_non_empty_payments();
+        let mut total = BigUint::zero();
+        for payment in &payments {
+            self.require_token_in_whitelist(&payment.token_identifier);
+
+            total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+        }
+
+        let args = AddDelegationArgs {
+            total_delegated_mapper: self.total_delegated_amount(validator_id),
+            total_by_user_mapper: self.total_by_user(user_id_of_validator, validator_id),
+            all_delegators_mapper: &mut self.all_delegators(validator_id),
+            delegated_by_mapper: self.delegated_by(user_id_of_validator, validator_id),
+            opt_validator_config_mapper: Some(self.validator_config(validator_id)),
+            payments_to_add: payments,
+            total_amount: total,
+            caller_id: user_id_of_validator,
+        };
+        self.add_delegation(args);
 
         // TODO: event
     }

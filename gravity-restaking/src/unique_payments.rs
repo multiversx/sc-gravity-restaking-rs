@@ -7,7 +7,17 @@ use mergeable::Mergeable;
 
 pub type PaymentsVec<M> = ManagedVec<M, EsdtTokenPayment<M>>;
 
-#[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, PartialEq, Debug)]
+#[derive(
+    TypeAbi,
+    TopEncode,
+    TopDecode,
+    NestedEncode,
+    NestedDecode,
+    Clone,
+    PartialEq,
+    Debug,
+    ManagedVecItem,
+)]
 pub struct UniquePayments<M: ManagedTypeApi> {
     payments: PaymentsVec<M>,
 }
@@ -95,5 +105,46 @@ impl<M: ManagedTypeApi> UniquePayments<M> {
     #[inline]
     pub fn into_payments(self) -> PaymentsVec<M> {
         self.payments
+    }
+}
+
+impl<M: ManagedTypeApi> Mergeable<M> for UniquePayments<M> {
+    #[inline]
+    fn can_merge_with(&self, _other: &Self) -> bool {
+        true
+    }
+
+    fn merge_with(&mut self, mut other: Self) {
+        self.error_if_not_mergeable(&other);
+
+        if self.payments.is_empty() {
+            self.payments = other.payments;
+            return;
+        }
+        if other.payments.is_empty() {
+            return;
+        }
+
+        let first_len = self.payments.len();
+        let mut second_len = other.payments.len();
+        for i in 0..first_len {
+            let mut current_payment = self.payments.get(i);
+            for j in 0..second_len {
+                let other_payment = other.payments.get(j);
+                if !current_payment.can_merge_with(&other_payment) {
+                    continue;
+                }
+
+                current_payment.amount += other_payment.amount;
+                let _ = self.payments.set(i, &current_payment);
+
+                other.payments.remove(j);
+                second_len -= 1;
+
+                break;
+            }
+        }
+
+        self.payments.append_vec(other.payments);
     }
 }

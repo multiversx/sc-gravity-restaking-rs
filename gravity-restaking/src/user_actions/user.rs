@@ -15,7 +15,9 @@ pub trait UserModule:
     crate::token_whitelist::TokenWhitelistModule
     + super::validator::ValidatorModule
     + super::sovereign::SovereignModule
+    + super::unbond::UnbondModule
     + super::common_actions::CommonActionsModule
+    + super::common_storage::CommonStorageModule
     + utils::UtilsModule
 {
     #[payable("*")]
@@ -23,23 +25,7 @@ pub trait UserModule:
     fn deposit(&self) {
         let payments = self.get_non_empty_payments();
         let caller = self.blockchain().get_caller();
-        let ids_mapper = self.user_ids();
-        let mut caller_id = ids_mapper.get_id(&caller);
-        let mut user_tokens = if caller_id == NULL_ID {
-            caller_id = ids_mapper.insert_new(&caller);
-
-            UniquePayments::new()
-        } else {
-            self.user_tokens(caller_id).get()
-        };
-
-        for payment in &payments {
-            self.require_token_in_whitelist(&payment.token_identifier);
-
-            user_tokens.add_payment(payment);
-        }
-
-        self.user_tokens(caller_id).set(user_tokens);
+        self.deposit_common(&caller, payments);
     }
 
     /// Pairs of (token_id, nonce, amount)
@@ -226,76 +212,49 @@ pub trait UserModule:
         // TODO: event
     }
 
-    /// Used by validators
-    #[payable("*")]
-    #[endpoint(addOwnDelegation)]
-    fn add_own_delegation(&self) {
-        let validator = self.blockchain().get_caller();
-        let validator_id = self.validator_id().get_id_non_zero(&validator);
-        let user_id_of_validator = self.user_ids().get_id_or_insert(&validator);
-
-        let payments = self.get_non_empty_payments();
-        let mut total = BigUint::zero();
-        for payment in &payments {
-            self.require_token_in_whitelist(&payment.token_identifier);
-
-            total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+    #[endpoint(unbondTokensCaller)]
+    fn unbond_tokens_caller(&self) {
+        let caller = self.blockchain().get_caller();
+        let caller_id = self.user_ids().get_id_non_zero(&caller);
+        let output_unique_payments = self.unbond_tokens_common(caller_id);
+        let output_payments = output_unique_payments.into_payments();
+        if !output_payments.is_empty() {
+            self.send().direct_multi(&caller, &output_payments);
         }
-
-        let args = AddDelegationArgs {
-            total_delegated_mapper: self.total_delegated_amount(validator_id),
-            total_by_user_mapper: self.total_by_user(user_id_of_validator, validator_id),
-            all_delegators_mapper: &mut self.all_delegators(validator_id),
-            delegated_by_mapper: self.delegated_by(user_id_of_validator, validator_id),
-            opt_validator_config_mapper: Some(self.validator_config(validator_id)),
-            payments_to_add: payments,
-            total_amount: total,
-            caller_id: user_id_of_validator,
-        };
-        self.add_delegation(args);
-
-        // TODO: event
     }
 
-    /// Used by sovereign chains
-    #[payable("*")]
-    #[endpoint(addOwnSecurityFunds)]
-    fn add_own_security_funds(&self) {
-        let sov_chain = self.blockchain().get_caller();
-        let sov_id = self.sovereign_id().get_id_non_zero(&sov_chain);
-        let user_id_of_sov_chain = self.user_ids().get_id_or_insert(&sov_chain);
+    #[endpoint(unbondTokensGravityRestaking)]
+    fn unbond_tokens_gravity_restaking(&self) {
+        let caller = self.blockchain().get_caller();
+        let caller_id = self.user_ids().get_id_non_zero(&caller);
+        let output_unique_payments = self.unbond_tokens_common(caller_id);
+        let output_payments = output_unique_payments.into_payments();
+        if !output_payments.is_empty() {
+            self.deposit_common(&caller, output_payments);
+        }
+    }
 
-        let payments = self.get_non_empty_payments();
-        let mut total = BigUint::zero();
+    fn deposit_common(&self, caller: &ManagedAddress, payments: PaymentsVec<Self::Api>) {
+        let ids_mapper = self.user_ids();
+        let mut caller_id = ids_mapper.get_id(caller);
+        let mut user_tokens = if caller_id == NULL_ID {
+            caller_id = ids_mapper.insert_new(caller);
+
+            UniquePayments::new()
+        } else {
+            self.user_tokens(caller_id).get()
+        };
+
         for payment in &payments {
             self.require_token_in_whitelist(&payment.token_identifier);
 
-            total += self.get_total_staked_egld(&payment.token_identifier, &payment.amount);
+            user_tokens.add_payment(payment);
         }
 
-        let args = AddDelegationArgs {
-            total_delegated_mapper: self.total_delegated_sov_amount(sov_id),
-            total_by_user_mapper: self.total_sov_by_user(user_id_of_sov_chain, sov_id),
-            all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
-            delegated_by_mapper: self.delegated_sov_by(user_id_of_sov_chain, sov_id),
-            opt_validator_config_mapper: None,
-            payments_to_add: payments,
-            total_amount: total,
-            caller_id: user_id_of_sov_chain,
-        };
-        self.add_delegation(args);
-
-        // TODO: event
+        self.user_tokens(caller_id).set(user_tokens);
     }
 
     fn require_non_empty_args(&self, args: &PaymentsMultiValue<Self::Api>) {
         require!(!args.is_empty(), "No arguments");
     }
-
-    #[storage_mapper("userIds")]
-    fn user_ids(&self) -> AddressToIdMapper<Self::Api>;
-
-    #[view(getUserTokens)]
-    #[storage_mapper("userTokens")]
-    fn user_tokens(&self, user_id: AddressId) -> SingleValueMapper<UniquePayments<Self::Api>>;
 }
