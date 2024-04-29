@@ -176,11 +176,11 @@ pub trait UserModule:
             total_by_user_mapper: self.total_by_user(caller_id, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
-            user_tokens_mapper: self.user_tokens(caller_id),
             tokens,
             caller_id,
         };
-        self.remove_delegation(args);
+        let output_unique_payments = self.remove_delegation(args);
+        self.add_unbond_tokens(caller_id, output_unique_payments);
 
         // TODO: event
     }
@@ -203,11 +203,11 @@ pub trait UserModule:
             total_by_user_mapper: self.total_sov_by_user(caller_id, sov_id),
             all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
             delegated_by_mapper: self.delegated_sov_by(caller_id, sov_id),
-            user_tokens_mapper: self.user_tokens(caller_id),
             tokens,
             caller_id,
         };
-        self.remove_delegation(args);
+        let output_unique_payments = self.remove_delegation(args);
+        self.add_unbond_tokens(caller_id, output_unique_payments);
 
         // TODO: event
     }
