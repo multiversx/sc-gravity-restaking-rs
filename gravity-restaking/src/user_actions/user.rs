@@ -110,6 +110,7 @@ pub trait UserModule:
         let caller = self.blockchain().get_caller();
         let caller_id = self.user_ids().get_id_non_zero(&caller);
         let validator_id = self.validator_id().get_id_non_zero(&validator);
+        let validator_config = self.validator_config(validator_id).get();
         let (output_payments, total) =
             self.before_add_delegation(self.user_tokens(caller_id), tokens);
 
@@ -118,7 +119,7 @@ pub trait UserModule:
             total_by_user_mapper: self.total_by_user(caller_id, validator_id),
             all_delegators_mapper: &mut self.all_delegators(validator_id),
             delegated_by_mapper: self.delegated_by(caller_id, validator_id),
-            opt_validator_config_mapper: Some(self.validator_config(validator_id)),
+            opt_max_delegation: validator_config.opt_max_delegation,
             payments_to_add: output_payments,
             total_amount: total,
             caller_id,
@@ -141,6 +142,7 @@ pub trait UserModule:
         let sov_id = self.sov_chain_for_name(&sov_name).get();
         self.require_valid_sov_id(sov_id);
 
+        let sov_info = self.sovereign_info(sov_id).get();
         let (output_payments, total) =
             self.before_add_delegation(self.user_tokens(caller_id), tokens);
 
@@ -149,7 +151,7 @@ pub trait UserModule:
             total_by_user_mapper: self.total_sov_by_user(caller_id, sov_id),
             all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
             delegated_by_mapper: self.delegated_sov_by(caller_id, sov_id),
-            opt_validator_config_mapper: None,
+            opt_max_delegation: sov_info.opt_max_restaking_cap,
             payments_to_add: output_payments,
             total_amount: total,
             caller_id,

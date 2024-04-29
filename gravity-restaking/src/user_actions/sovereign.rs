@@ -1,4 +1,4 @@
-use crate::unique_payments::UniquePayments;
+use crate::{unique_payments::UniquePayments, user_actions::validator::INVALID_MAX_AMOUNT_ERR_MSG};
 
 use super::common_actions::AddDelegationArgs;
 
@@ -11,12 +11,17 @@ pub type Epoch = u64;
 pub struct SovereignInfo<M: ManagedTypeApi> {
     pub name: ManagedBuffer<M>,
     pub description: ManagedBuffer<M>,
+    pub opt_max_restaking_cap: Option<BigUint<M>>,
 }
 
 impl<M: ManagedTypeApi> SovereignInfo<M> {
     #[inline]
     pub fn new(name: ManagedBuffer<M>, description: ManagedBuffer<M>) -> Self {
-        Self { name, description }
+        Self {
+            name,
+            description,
+            opt_max_restaking_cap: Option::None,
+        }
     }
 }
 
@@ -78,6 +83,7 @@ pub trait SovereignModule:
     fn add_own_security_funds(&self) {
         let sov_chain = self.blockchain().get_caller();
         let sov_id = self.sovereign_id().get_id_non_zero(&sov_chain);
+        let sov_info = self.sovereign_info(sov_id).get();
         let user_id_of_sov_chain = self.user_ids().get_id_or_insert(&sov_chain);
 
         let payments = self.get_non_empty_payments();
@@ -93,7 +99,7 @@ pub trait SovereignModule:
             total_by_user_mapper: self.total_sov_by_user(user_id_of_sov_chain, sov_id),
             all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
             delegated_by_mapper: self.delegated_sov_by(user_id_of_sov_chain, sov_id),
-            opt_validator_config_mapper: None,
+            opt_max_delegation: sov_info.opt_max_restaking_cap,
             payments_to_add: payments,
             total_amount: total,
             caller_id: user_id_of_sov_chain,
@@ -101,6 +107,18 @@ pub trait SovereignModule:
         self.add_delegation(args);
 
         // TODO: event
+    }
+
+    #[endpoint(setMaxReStakingCap)]
+    fn set_max_restaking_cap(&self, max_cap: BigUint) {
+        let caller = self.blockchain().get_caller();
+        let sov_id = self.sovereign_id().get_id_non_zero(&caller);
+        self.sovereign_info(sov_id).update(|sov_info| {
+            let current_total = self.total_delegated_sov_amount(sov_id).get();
+            require!(max_cap >= current_total, INVALID_MAX_AMOUNT_ERR_MSG);
+
+            sov_info.opt_max_restaking_cap = Some(max_cap);
+        });
     }
 
     #[view(getSovInfo)]

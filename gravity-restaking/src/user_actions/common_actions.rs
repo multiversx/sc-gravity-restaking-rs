@@ -2,7 +2,7 @@ use multiversx_sc::api::StorageMapperApi;
 
 use crate::unique_payments::{PaymentsVec, UniquePayments};
 
-use super::{user::PaymentsMultiValue, validator::ValidatorConfig};
+use super::user::PaymentsMultiValue;
 
 multiversx_sc::imports!();
 
@@ -11,7 +11,7 @@ pub struct AddDelegationArgs<'a, S: StorageMapperApi> {
     pub total_by_user_mapper: SingleValueMapper<S, BigUint<S>>,
     pub all_delegators_mapper: &'a mut UnorderedSetMapper<S, AddressId>,
     pub delegated_by_mapper: SingleValueMapper<S, UniquePayments<S>>,
-    pub opt_validator_config_mapper: Option<SingleValueMapper<S, ValidatorConfig<S>>>,
+    pub opt_max_delegation: Option<BigUint<S>>,
     pub payments_to_add: PaymentsVec<S>,
     pub total_amount: BigUint<S>,
     pub caller_id: AddressId,
@@ -59,11 +59,8 @@ pub trait CommonActionsModule: crate::token_whitelist::TokenWhitelistModule {
         args.total_delegated_mapper.update(|total_del| {
             *total_del += &args.total_amount;
 
-            if let Some(config_mapper) = args.opt_validator_config_mapper {
-                let config = config_mapper.get();
-                if let Some(max_amt) = config.opt_max_delegation {
-                    require!(*total_del <= max_amt, "Max delegated amount exceeded");
-                }
+            if let Some(max_amt) = args.opt_max_delegation {
+                require!(*total_del <= max_amt, "Max delegated amount exceeded");
             }
         });
 
