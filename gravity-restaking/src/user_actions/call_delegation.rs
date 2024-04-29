@@ -25,7 +25,9 @@ pub trait CallDelegationModule:
     + crate::token_whitelist::TokenWhitelistModule
     + super::validator::ValidatorModule
     + super::sovereign::SovereignModule
+    + super::unbond::UnbondModule
     + super::common_actions::CommonActionsModule
+    + super::common_storage::CommonStorageModule
     + utils::UtilsModule
 {
     #[endpoint(moveStakeToReStaking)]

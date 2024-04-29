@@ -22,7 +22,6 @@ pub struct RemoveDelegationArgs<'a, S: StorageMapperApi> {
     pub total_by_user_mapper: SingleValueMapper<S, BigUint<S>>,
     pub all_delegators_mapper: &'a mut UnorderedSetMapper<S, AddressId>,
     pub delegated_by_mapper: SingleValueMapper<S, UniquePayments<S>>,
-    pub user_tokens_mapper: SingleValueMapper<S, UniquePayments<S>>,
     pub tokens: PaymentsMultiValue<S>,
     pub caller_id: AddressId,
 }
@@ -84,7 +83,10 @@ pub trait CommonActionsModule: crate::token_whitelist::TokenWhitelistModule {
         args.delegated_by_mapper.set(tokens_delegated_by_user);
     }
 
-    fn remove_delegation(&self, args: RemoveDelegationArgs<Self::Api>) {
+    fn remove_delegation(
+        &self,
+        args: RemoveDelegationArgs<Self::Api>,
+    ) -> UniquePayments<Self::Api> {
         require!(!args.delegated_by_mapper.is_empty(), "Nothing delegated");
 
         let mut output_payments = PaymentsVec::new();
@@ -114,10 +116,6 @@ pub trait CommonActionsModule: crate::token_whitelist::TokenWhitelistModule {
             }
         });
 
-        args.user_tokens_mapper.update(|user_tokens| {
-            for payment in &output_payments {
-                user_tokens.add_payment(payment);
-            }
-        });
+        UniquePayments::new_from_payments(output_payments)
     }
 }
