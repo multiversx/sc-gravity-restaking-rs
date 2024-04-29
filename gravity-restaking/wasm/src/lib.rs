@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           22
+// Endpoints:                           29
 // Async Callback:                       1
-// Total number of exported functions:  24
+// Total number of exported functions:  31
 
 #![no_std]
 #![allow(internal_features)]
@@ -24,7 +24,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         moveStakeToReStaking => move_stake_to_re_staking
         addTokenToWhitelist => add_token_to_whitelist
         removeTokenFromWhitelist => remove_token_from_whitelist
-        setStakedEgldAmount => set_staked_egld_amount
         getTokenDecimals => get_token_decimals
         getTokenWhitelist => token_whitelist
         getStakedEgldForOneToken => staked_egld_for_one_token
@@ -32,8 +31,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         withdraw => withdraw
         withdrawAll => withdraw_all
         delegateToValidator => delegate_to_validator
+        delegateForSovereignChain => delegate_for_sovereign_chain
         revokeDelegationFromValidator => revoke_delegation_from_validator
+        revokeDelegationFromSovereignChain => revoke_delegation_from_sovereign_chain
         addOwnDelegation => add_own_delegation
+        addOwnSecurityFunds => add_own_security_funds
         getUserTokens => user_tokens
         register => register
         addKeys => add_keys
@@ -42,6 +44,11 @@ multiversx_sc_wasm_adapter::endpoints! {
         setMaxDelegation => set_max_delegation
         getValidatorConfig => get_validator_config
         getTotalDelegatedAmount => get_total_delegated_amount
+        registerSov => register_sov
+        setUpRewards => set_up_rewards
+        unRegister => unregister
+        addRewards => add_rewards
+        getSovInfo => get_sov_info
     )
 }
 

@@ -1,3 +1,5 @@
+use crate::call_delegation::EGLD_TOKEN_ID;
+
 multiversx_sc::imports!();
 
 pub const BASE_FOR_DECIMALS: u32 = 10;
@@ -25,6 +27,7 @@ pub trait TokenWhitelistModule {
         require!(is_new, "Token already whitelisted");
     }
 
+    /// Note: Don't remove and add to set the staked_egld_for_one_token parameter, you'll ruin the internal consistency
     #[only_owner]
     #[endpoint(removeTokenFromWhitelist)]
     fn remove_token_from_whitelist(&self, token_id: TokenIdentifier) {
@@ -33,19 +36,6 @@ pub trait TokenWhitelistModule {
 
         self.staked_egld_for_one_token(&token_id).clear();
         self.custom_token_decimals(&token_id).clear();
-    }
-
-    #[only_owner]
-    #[endpoint(setStakedEgldAmount)]
-    fn set_staked_egld_amount(
-        &self,
-        token_id: TokenIdentifier,
-        staked_egld_for_one_token: BigUint,
-    ) {
-        self.require_token_in_whitelist(&token_id);
-
-        self.staked_egld_for_one_token(&token_id)
-            .set(staked_egld_for_one_token);
     }
 
     #[view(getTokenDecimals)]
@@ -59,6 +49,10 @@ pub trait TokenWhitelistModule {
     }
 
     fn get_total_staked_egld(&self, token_id: &TokenIdentifier, amount: &BigUint) -> BigUint {
+        if token_id == &TokenIdentifier::from_esdt_bytes(EGLD_TOKEN_ID) {
+            return amount.clone();
+        }
+
         let staked_egld_one_token = self.staked_egld_for_one_token(token_id).get();
         let decimals = self.get_token_decimals(token_id);
 
