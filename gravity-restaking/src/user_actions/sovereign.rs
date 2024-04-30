@@ -30,6 +30,7 @@ pub trait SovereignModule:
     crate::token_whitelist::TokenWhitelistModule
     + crate::user_actions::common_actions::CommonActionsModule
     + crate::user_actions::common_storage::CommonStorageModule
+    + crate::events::sov_events::SovEventsModule
     + utils::UtilsModule
 {
     #[endpoint(registerSov)]
@@ -37,16 +38,16 @@ pub trait SovereignModule:
         self.require_not_empty_buffer(&name);
 
         let caller = self.blockchain().get_caller();
-        let caller_id = self.sovereign_id().insert_new(&caller);
+        let caller_id = self.sov_id().insert_new(&caller);
 
         let id_for_name_mapper = self.sov_chain_for_name(&name);
         require!(id_for_name_mapper.is_empty(), "Name already taken");
 
-        self.sovereign_info(caller_id)
-            .set(SovereignInfo::new(name, description));
+        let sov_info = SovereignInfo::new(name, description);
+        self.sov_info(caller_id).set(&sov_info);
         id_for_name_mapper.set(caller_id);
 
-        // TODO: event
+        self.emit_sov_register_event(caller, sov_info);
     }
 
     #[endpoint(setUpRewards)]
@@ -58,18 +59,20 @@ pub trait SovereignModule:
         /* _computation: ???, */
     ) {
         let caller = self.blockchain().get_caller();
-        let _caller_id = self.sovereign_id().get_id_non_zero(&caller);
+        let _caller_id = self.sov_id().get_id_non_zero(&caller);
         // TODO: Unsure what to do with all this info yet
     }
 
     #[endpoint(unRegister)]
     fn unregister(&self) {
         let caller = self.blockchain().get_caller();
-        let caller_id = self.sovereign_id().remove_by_address(&caller);
+        let caller_id = self.sov_id().remove_by_address(&caller);
         require!(caller_id != NULL_ID, "Unknown sovereign chain");
 
-        let sov_info = self.sovereign_info(caller_id).take();
+        let sov_info = self.sov_info(caller_id).take();
         self.sov_chain_for_name(&sov_info.name).clear();
+
+        self.emit_sov_unregister_event(caller);
     }
 
     #[payable("*")]
@@ -82,8 +85,8 @@ pub trait SovereignModule:
     #[endpoint(addOwnSecurityFunds)]
     fn add_own_security_funds(&self) {
         let sov_chain = self.blockchain().get_caller();
-        let sov_id = self.sovereign_id().get_id_non_zero(&sov_chain);
-        let sov_info = self.sovereign_info(sov_id).get();
+        let sov_id = self.sov_id().get_id_non_zero(&sov_chain);
+        let sov_info = self.sov_info(sov_id).get();
         let user_id_of_sov_chain = self.user_ids().get_id_or_insert(&sov_chain);
 
         let payments = self.get_non_empty_payments();
@@ -100,32 +103,34 @@ pub trait SovereignModule:
             all_delegators_mapper: &mut self.all_sov_delegators(sov_id),
             delegated_by_mapper: self.delegated_sov_by(user_id_of_sov_chain, sov_id),
             opt_max_delegation: sov_info.opt_max_restaking_cap,
-            payments_to_add: payments,
+            payments_to_add: payments.clone(),
             total_amount: total,
             caller_id: user_id_of_sov_chain,
         };
         self.add_delegation(args);
 
-        // TODO: event
+        self.sov_add_own_security_funds_event(sov_chain, payments);
     }
 
     #[endpoint(setMaxReStakingCap)]
     fn set_max_restaking_cap(&self, max_cap: BigUint) {
         let caller = self.blockchain().get_caller();
-        let sov_id = self.sovereign_id().get_id_non_zero(&caller);
-        self.sovereign_info(sov_id).update(|sov_info| {
+        let sov_id = self.sov_id().get_id_non_zero(&caller);
+        self.sov_info(sov_id).update(|sov_info| {
             let current_total = self.total_delegated_sov_amount(sov_id).get();
             require!(max_cap >= current_total, INVALID_MAX_AMOUNT_ERR_MSG);
 
-            sov_info.opt_max_restaking_cap = Some(max_cap);
+            sov_info.opt_max_restaking_cap = Some(max_cap.clone());
         });
+
+        self.emit_sov_set_max_restaking_cap_event(caller, max_cap);
     }
 
     #[view(getSovInfo)]
     fn get_sov_info(&self, sov_address: ManagedAddress) -> SovereignInfo<Self::Api> {
-        let sov_id = self.sovereign_id().get_id_non_zero(&sov_address);
+        let sov_id = self.sov_id().get_id_non_zero(&sov_address);
 
-        self.sovereign_info(sov_id).get()
+        self.sov_info(sov_id).get()
     }
 
     fn require_valid_sov_id(&self, sov_id: AddressId) {
@@ -133,10 +138,10 @@ pub trait SovereignModule:
     }
 
     #[storage_mapper("sovId")]
-    fn sovereign_id(&self) -> AddressToIdMapper<Self::Api>;
+    fn sov_id(&self) -> AddressToIdMapper<Self::Api>;
 
     #[storage_mapper("sovInfo")]
-    fn sovereign_info(&self, sov_id: AddressId) -> SingleValueMapper<SovereignInfo<Self::Api>>;
+    fn sov_info(&self, sov_id: AddressId) -> SingleValueMapper<SovereignInfo<Self::Api>>;
 
     #[storage_mapper("sovForName")]
     fn sov_chain_for_name(&self, name: &ManagedBuffer) -> SingleValueMapper<AddressId>;

@@ -4,6 +4,7 @@ use user_actions::sovereign::Epoch;
 
 multiversx_sc::imports!();
 
+pub mod events;
 pub mod token_whitelist;
 pub mod unique_payments;
 pub mod user_actions;
@@ -18,6 +19,9 @@ pub trait GravityRestaking:
     + user_actions::common_actions::CommonActionsModule
     + user_actions::common_storage::CommonStorageModule
     + user_actions::unbond::UnbondModule
+    + events::user_events::UserEventsModule
+    + events::validator_events::ValidatorEventsModule
+    + events::sov_events::SovEventsModule
     + utils::UtilsModule
 {
     #[init]
