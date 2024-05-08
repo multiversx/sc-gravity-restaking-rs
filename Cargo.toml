@@ -3,5 +3,9 @@ resolver = "2"
 
 members = [
   "gravity-restaking",
-  "gravity-restaking/meta"
+  "gravity-restaking/meta",
+  "liquid-staking",
+  "liquid-staking/meta",
+  "delegation-mock",
+  "delegation-mock/meta"
 ]

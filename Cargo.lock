@@ -399,6 +399,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "delegation-mock"
+version = "0.0.0"
+dependencies = [
+ "itertools 0.10.5",
+ "multiversx-sc",
+ "multiversx-sc-scenario",
+]
+
+[[package]]
+name = "delegation-mock-meta"
+version = "0.0.0"
+dependencies = [
+ "delegation-mock",
+ "multiversx-sc-meta",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -823,6 +840,15 @@ checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
 
 [[package]]
 name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
@@ -871,6 +897,25 @@ name = "linux-raw-sys"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
+
+[[package]]
+name = "liquid-staking"
+version = "0.0.0"
+dependencies = [
+ "delegation-mock",
+ "itertools 0.10.5",
+ "multiversx-sc",
+ "multiversx-sc-modules",
+ "multiversx-sc-scenario",
+]
+
+[[package]]
+name = "liquid-staking-abi"
+version = "0.0.0"
+dependencies = [
+ "liquid-staking",
+ "multiversx-sc-meta",
+]
 
 [[package]]
 name = "lock_api"
@@ -962,7 +1007,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "hex-literal",
- "itertools",
+ "itertools 0.12.1",
  "multiversx-chain-vm-executor",
  "num-bigint",
  "num-traits",
@@ -1055,6 +1100,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "multiversx-sc-modules"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e507a180afcab409cc3d920bc12f3852cf481a6657428879d1a70f6c2666c94"
+dependencies = [
+ "multiversx-sc",
+]
+
+[[package]]
 name = "multiversx-sc-scenario"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1065,7 +1119,7 @@ dependencies = [
  "clap",
  "colored",
  "hex",
- "itertools",
+ "itertools 0.12.1",
  "log",
  "multiversx-chain-scenario-format",
  "multiversx-chain-vm",
@@ -1094,7 +1148,7 @@ dependencies = [
  "bip39",
  "hex",
  "hmac",
- "itertools",
+ "itertools 0.12.1",
  "pbkdf2",
  "pem",
  "rand 0.8.5",
