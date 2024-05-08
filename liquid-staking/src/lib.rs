@@ -277,8 +277,6 @@ pub trait LiquidStaking<ContractReader>:
                 .update(|x| *x -= &unstake_amount);
             self.burn_unstake_tokens(payment.token_nonce);
             self.send().direct_egld(&caller, &unstake_amount);
-
-            drop(storage_cache);
         } else {
             drop(storage_cache);
 
