@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           31
+// Endpoints:                           32
 // Async Callback:                       1
-// Total number of exported functions:  33
+// Total number of exported functions:  34
 
 #![no_std]
 #![allow(internal_features)]
@@ -20,13 +20,7 @@ multiversx_sc_wasm_adapter::endpoints! {
     liquid_staking
     (
         init => init
-        addLiquidity => add_liquidity
-        removeLiquidity => remove_liquidity
-        unbondTokens => unbond_tokens
-        claimRewards => claim_rewards
-        recomputeTokenReserve => recompute_token_reserve
-        delegateRewards => delegate_rewards
-        getLsValueForPosition => get_ls_value_for_position
+        upgrade => upgrade
         registerLsToken => register_ls_token
         registerUnstakeToken => register_unstake_token
         setStateActive => set_state_active
@@ -51,6 +45,13 @@ multiversx_sc_wasm_adapter::endpoints! {
         getDelegationClaimStatus => delegation_claim_status
         maxDelegationAddresses => max_delegation_addresses
         getDelegationContractData => delegation_contract_data
+        getLsValueForPosition => get_ls_value_for_position
+        addLiquidity => add_liquidity
+        removeLiquidity => remove_liquidity
+        unbondTokens => unbond_tokens
+        claimRewards => claim_rewards
+        delegateRewards => delegate_rewards
+        recomputeTokenReserve => recompute_token_reserve
     )
 }
 

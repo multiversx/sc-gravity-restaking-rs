@@ -1,6 +1,12 @@
 use crate::contract_setup::LiquidStakingContractSetup;
 use liquid_staking::config::{ConfigModule, UnstakeTokenAttributes};
-use liquid_staking::LiquidStaking;
+use liquid_staking::user_actions::add_liquidity::AddLiquidityModule;
+use liquid_staking::user_actions::claim_rewards::ClaimRewardsModule;
+use liquid_staking::user_actions::common::CommonModule;
+use liquid_staking::user_actions::delegate_rewards::DelegateRewardsModule;
+use liquid_staking::user_actions::recompute_token_reserve::RecomputeTokenReserveModule;
+use liquid_staking::user_actions::remove_liquidity::RemoveLiquidityModule;
+use liquid_staking::user_actions::unbond::UnbondModule;
 use multiversx_sc::types::Address;
 use multiversx_sc_scenario::{managed_address, num_bigint, rust_biguint, DebugApi};
 
