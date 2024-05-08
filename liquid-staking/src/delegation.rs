@@ -1,3 +1,5 @@
+use delegation_mock::Epoch;
+
 use crate::errors::{
     ERROR_ALREADY_WHITELISTED, ERROR_BAD_DELEGATION_ADDRESS, ERROR_CLAIM_EPOCH, ERROR_CLAIM_START,
     ERROR_DELEGATION_CAP, ERROR_FIRST_DELEGATION_NODE, ERROR_NOT_WHITELISTED,
@@ -20,8 +22,8 @@ pub enum ClaimStatusType {
 #[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, PartialEq, Eq, TypeAbi, Clone)]
 pub struct ClaimStatus<M: ManagedTypeApi> {
     pub status: ClaimStatusType,
-    pub last_claim_epoch: u64,
-    pub last_claim_block: u64,
+    pub last_claim_epoch: Epoch,
+    pub last_claim_block: Epoch,
     pub current_node: u32,
     pub starting_token_reserve: BigUint<M>,
 }
@@ -85,7 +87,7 @@ pub trait DelegationModule:
         );
 
         require!(
-            delegation_contract_cap >= total_staked,
+            total_staked <= delegation_contract_cap,
             ERROR_DELEGATION_CAP
         );
 
@@ -138,7 +140,7 @@ pub trait DelegationModule:
             ERROR_ONLY_DELEGATION_ADMIN
         );
         require!(
-            delegation_contract_cap >= total_staked,
+            total_staked <= delegation_contract_cap,
             ERROR_DELEGATION_CAP
         );
 
@@ -159,23 +161,26 @@ pub trait DelegationModule:
         let mut delegation_addresses_mapper = self.delegation_addresses_list();
         if delegation_addresses_mapper.is_empty() {
             delegation_addresses_mapper.push_front(contract_address);
-        } else {
-            let mut check_if_added = false;
-            for delegation_address_element in delegation_addresses_mapper.iter() {
-                let node_id = delegation_address_element.get_node_id();
-                let delegation_address = delegation_address_element.into_value();
-                let delegation_contract_data =
-                    self.delegation_contract_data(&delegation_address).get();
-                if apy >= delegation_contract_data.apy {
-                    self.delegation_addresses_list()
-                        .push_before_node_id(node_id, contract_address.clone());
-                    check_if_added = true;
-                    break;
-                }
+
+            return;
+        }
+
+        let mut added = false;
+        for delegation_address_element in delegation_addresses_mapper.iter() {
+            let node_id = delegation_address_element.get_node_id();
+            let delegation_address = delegation_address_element.into_value();
+            let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
+            if apy >= delegation_contract_data.apy {
+                self.delegation_addresses_list()
+                    .push_before_node_id(node_id, contract_address.clone());
+                added = true;
+
+                break;
             }
-            if !check_if_added {
-                delegation_addresses_mapper.push_back(contract_address);
-            }
+        }
+
+        if !added {
+            delegation_addresses_mapper.push_back(contract_address);
         }
     }
 
@@ -185,6 +190,7 @@ pub trait DelegationModule:
             let delegation_address = delegation_address_element.into_value();
             if contract_address == &delegation_address {
                 self.delegation_addresses_list().remove_node_by_id(node_id);
+
                 break;
             }
         }
@@ -206,7 +212,6 @@ pub trait DelegationModule:
         );
 
         let delegation_addresses_mapper = self.delegation_addresses_list();
-
         for delegation_address_element in delegation_addresses_mapper.iter() {
             let delegation_address = delegation_address_element.into_value();
             let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
@@ -217,6 +222,7 @@ pub trait DelegationModule:
                 return delegation_address;
             }
         }
+
         sc_panic!(ERROR_BAD_DELEGATION_ADDRESS);
     }
 
@@ -230,7 +236,6 @@ pub trait DelegationModule:
         );
 
         let delegation_addresses_mapper = self.delegation_addresses_list();
-
         for delegation_address_element in delegation_addresses_mapper.iter() {
             let delegation_address = delegation_address_element.into_value();
             let delegation_contract_data = self.delegation_contract_data(&delegation_address).get();
@@ -239,6 +244,7 @@ pub trait DelegationModule:
                 return delegation_address;
             }
         }
+
         sc_panic!(ERROR_BAD_DELEGATION_ADDRESS);
     }
 
@@ -246,7 +252,7 @@ pub trait DelegationModule:
         &self,
         current_claim_status: &ClaimStatus<Self::Api>,
         old_claim_status: ClaimStatus<Self::Api>,
-        current_epoch: u64,
+        current_epoch: Epoch,
     ) {
         require!(
             current_claim_status.status == ClaimStatusType::None
@@ -267,24 +273,27 @@ pub trait DelegationModule:
     fn prepare_claim_operation(
         &self,
         current_claim_status: &mut ClaimStatus<Self::Api>,
-        current_epoch: u64,
+        current_epoch: Epoch,
     ) {
-        if current_claim_status.status == ClaimStatusType::None {
-            let delegation_addresses_mapper = self.delegation_addresses_list();
-            require!(
-                delegation_addresses_mapper.front().unwrap().get_node_id() != 0,
-                ERROR_FIRST_DELEGATION_NODE
-            );
-            current_claim_status.status = ClaimStatusType::Pending;
-            current_claim_status.last_claim_epoch = current_epoch;
-            current_claim_status.current_node =
-                delegation_addresses_mapper.front().unwrap().get_node_id();
-            let current_total_withdrawn_egld = self.total_withdrawn_egld().get();
-            current_claim_status.starting_token_reserve = self
-                .blockchain()
-                .get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0)
-                - current_total_withdrawn_egld;
+        if current_claim_status.status != ClaimStatusType::None {
+            return;
         }
+
+        let delegation_addresses_mapper = self.delegation_addresses_list();
+        require!(
+            delegation_addresses_mapper.front().unwrap().get_node_id() != 0,
+            ERROR_FIRST_DELEGATION_NODE
+        );
+        current_claim_status.status = ClaimStatusType::Pending;
+        current_claim_status.last_claim_epoch = current_epoch;
+        current_claim_status.current_node =
+            delegation_addresses_mapper.front().unwrap().get_node_id();
+
+        let current_total_withdrawn_egld = self.total_withdrawn_egld().get();
+        let egld_balance = self
+            .blockchain()
+            .get_sc_balance(&EgldOrEsdtTokenIdentifier::egld(), 0);
+        current_claim_status.starting_token_reserve = egld_balance - current_total_withdrawn_egld;
     }
 
     #[view(getDelegationStatus)]

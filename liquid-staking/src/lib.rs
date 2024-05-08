@@ -14,6 +14,9 @@ pub const MIN_EGLD_TO_DELEGATE: u64 = 1_000_000_000_000_000_000;
 pub const RECOMPUTE_BLOCK_OFFSET: u64 = 10;
 pub const MAX_DELEGATION_ADDRESSES: usize = 50;
 
+pub type Epoch = u64;
+pub type Percent = u64;
+
 pub mod config;
 mod contexts;
 pub mod delegation;
@@ -74,6 +77,8 @@ pub trait LiquidStaking<ContractReader>:
 
         let delegation_contract = self.get_delegation_contract_for_delegate(&payment);
         let gas_for_async_call = self.get_gas_for_async_call();
+
+        drop(storage_cache);
 
         self.delegation_proxy_obj()
             .contract(delegation_contract.clone())
@@ -154,6 +159,8 @@ pub trait LiquidStaking<ContractReader>:
 
         let delegation_contract = self.get_delegation_contract_for_undelegate(&egld_to_unstake);
         let gas_for_async_call = self.get_gas_for_async_call();
+
+        drop(storage_cache);
 
         self.delegation_proxy_obj()
             .contract(delegation_contract.clone())
@@ -269,8 +276,12 @@ pub trait LiquidStaking<ContractReader>:
             self.unstake_token_supply()
                 .update(|x| *x -= &unstake_amount);
             self.burn_unstake_tokens(payment.token_nonce);
-            self.send().direct_egld(&caller, &unstake_amount)
+            self.send().direct_egld(&caller, &unstake_amount);
+
+            drop(storage_cache);
         } else {
+            drop(storage_cache);
+
             let gas_for_async_call = self.get_gas_for_async_call();
             self.delegation_proxy_obj()
                 .contract(delegation_contract.clone())
@@ -447,6 +458,8 @@ pub trait LiquidStaking<ContractReader>:
         storage_cache.rewards_reserve = BigUint::zero();
         let delegation_contract = self.get_delegation_contract_for_delegate(&rewards_reserve);
         let gas_for_async_call = self.get_gas_for_async_call();
+
+        drop(storage_cache);
 
         self.delegation_proxy_obj()
             .contract(delegation_contract.clone())

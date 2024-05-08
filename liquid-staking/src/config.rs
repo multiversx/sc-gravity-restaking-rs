@@ -1,19 +1,21 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::liquidity_pool::State;
+use delegation_mock::Epoch;
 
-pub const MAX_PERCENTAGE: u64 = 100_000;
-pub const UNBOND_PERIOD: u64 = 10;
+use crate::{liquidity_pool::State, Percent};
+
+pub const MAX_PERCENTAGE: Percent = 100_000;
+pub const UNBOND_PERIOD: Epoch = 10;
 
 #[derive(
     TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone, PartialEq, Eq, Debug,
 )]
 pub struct UnstakeTokenAttributes<M: ManagedTypeApi> {
     pub delegation_contract: ManagedAddress<M>,
-    pub unstake_epoch: u64,
+    pub unstake_epoch: Epoch,
     pub unstake_amount: BigUint<M>,
-    pub unbond_epoch: u64,
+    pub unbond_epoch: Epoch,
 }
 
 #[multiversx_sc::module]

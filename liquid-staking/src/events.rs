@@ -1,3 +1,5 @@
+use delegation_mock::Epoch;
+
 use crate::contexts::base::StorageCache;
 
 multiversx_sc::imports!();
@@ -12,7 +14,7 @@ pub struct AddLiquidityEvent<M: ManagedTypeApi> {
     virtual_egld_reserve: BigUint<M>,
     rewards_reserve: BigUint<M>,
     block: u64,
-    epoch: u64,
+    epoch: Epoch,
     timestamp: u64,
 }
 
@@ -27,7 +29,7 @@ pub struct RemoveLiquidityEvent<M: ManagedTypeApi> {
     virtual_egld_reserve: BigUint<M>,
     rewards_reserve: BigUint<M>,
     block: u64,
-    epoch: u64,
+    epoch: Epoch,
     timestamp: u64,
 }
 
@@ -94,7 +96,7 @@ pub trait EventsModule:
         &self,
         #[indexed] ls_token: &TokenIdentifier,
         #[indexed] caller: &ManagedAddress,
-        #[indexed] epoch: u64,
+        #[indexed] epoch: Epoch,
         add_liquidity_event: &AddLiquidityEvent<Self::Api>,
     );
 
@@ -103,7 +105,7 @@ pub trait EventsModule:
         &self,
         #[indexed] ls_token: &TokenIdentifier,
         #[indexed] caller: &ManagedAddress,
-        #[indexed] epoch: u64,
+        #[indexed] epoch: Epoch,
         remove_liquidity_event: &RemoveLiquidityEvent<Self::Api>,
     );
 }
