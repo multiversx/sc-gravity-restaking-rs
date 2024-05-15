@@ -899,25 +899,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
 
 [[package]]
-name = "liquid-staking"
-version = "0.0.0"
-dependencies = [
- "delegation-mock",
- "itertools 0.10.5",
- "multiversx-sc",
- "multiversx-sc-modules",
- "multiversx-sc-scenario",
-]
-
-[[package]]
-name = "liquid-staking-abi"
-version = "0.0.0"
-dependencies = [
- "liquid-staking",
- "multiversx-sc-meta",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1097,15 +1078,6 @@ dependencies = [
  "wasmparser",
  "wasmprinter",
  "zip",
-]
-
-[[package]]
-name = "multiversx-sc-modules"
-version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e507a180afcab409cc3d920bc12f3852cf481a6657428879d1a70f6c2666c94"
-dependencies = [
- "multiversx-sc",
 ]
 
 [[package]]
